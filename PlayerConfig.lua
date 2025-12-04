@@ -71,14 +71,34 @@ local InfToggle = MainTab:Toggle({
     end
 })
 
--- === WALKSPEED CORE === --
+--===== UI (DO NOT TOUCH) =====--
+
+local Slider = Tab:Slider({
+    Title = "WalkSpeed",
+    Desc = "Adjust walk speed",
+    Step = 1,
+    Value = {
+        Min = 16,
+        Max = 200,
+        Default = 16,
+    },
+    Callback = function(value)
+        -- will be filled below
+    end
+})
+
+
+--===== WALKSPEED LOGIC (UNDER SLIDER) =====--
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local CurrentSpeed = 16 -- default
 
-local function SetWalkSpeed(value)
-    CurrentSpeed = value
+local SavedSpeed = Slider.Value -- read slider default
+
+
+-- function to apply walkspeed safely
+local function ApplySpeed(value)
+    SavedSpeed = value
 
     pcall(function()
         local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -89,26 +109,19 @@ local function SetWalkSpeed(value)
     end)
 end
 
--- Apply again if player respawns
+
+-- connect slider callback
+Slider.Callback = function(value)
+    ApplySpeed(value)
+end
+
+
+-- apply on respawn
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(1)
-    SetWalkSpeed(CurrentSpeed)
+    ApplySpeed(SavedSpeed)
 end)
 
--- === UI TOGGLE === --
-local Slider = Tab:Slider({
-    Title = "Slider",
-    Desc = "Slider Description",
-    Step = 1,
-    Value = {
-        Min = 16,
-        Max = 150,
-        Default = CurrentSpeed,
-    },
-    Callback = function(value)
-        SetWalkSpeed(value)
-    end
-})
 
--- Apply default on start
-SetWalkSpeed(CurrentSpeed)
+-- apply default on script load
+ApplySpeed(SavedSpeed)
