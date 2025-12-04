@@ -1,7 +1,19 @@
-return function(MainTab)
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
--------- PLAYER CONFIGURATION --------
+local Window = WindUI:CreateWindow({
+    Title = "AxeeHUB  | Unpublished",
+    Icon = "door-open",
+    Author = ".gg/acellzxzz",
+})
 
+local MainTab = Window:Tab({
+    Title = "Player Settings",
+    Icon = "users",
+    Locked = false,
+})
+
+------ PLAYER CONFIGURATION --------
+  
 -- === REQUIRED SERVICES ===
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
