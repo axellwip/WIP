@@ -12,20 +12,16 @@ local MainTab = Window:Tab({
     Locked = false,
 })
 
-
---// Fully Working CFrame Checkpoint Mount Runner
-local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 local AutoRunEnabled = false
-local Speed = 70 -- studs per second, adjust as needed
 local CurrentCheckpoint = 1
+local Speed = 16 -- studs/sec
 
--- ====== Checkpoints (your CP0 → CP26 + SUMMIT) ======
+-- ======= Checkpoints starting from CP1 =======
 local Checkpoints = {
-    Vector3.new(-1220, 58.99, -2289),
     Vector3.new(-892.464844, 158.28302, -812.572815),
     Vector3.new(-892.464844, 158.28302, -812.572815),
     Vector3.new(-900.464844, 270.292969, 1456.42725),
@@ -55,17 +51,18 @@ local Checkpoints = {
     Vector3.new(3852.73438, 1693.01013, 10565.2842),
 }
 
--- Update character/mount references
+local Humanoid, Root
+
+-- Update character references
 local function UpdateCharacter()
     local char = LocalPlayer.Character
     if char then
         Humanoid = char:FindFirstChildOfClass("Humanoid")
         Root = char:FindFirstChild("HumanoidRootPart")
-        Mount = char:FindFirstChildWhichIsA("VehicleSeat") or char:FindFirstChild("MountSeat")
     end
 end
 
--- Detect obstacles using forward raycast
+-- Detect obstacles in front using forward ray
 local function DetectObstacle()
     if not Root then return false end
     local origin = Root.Position + Vector3.new(0,2,0)
@@ -77,7 +74,7 @@ local function DetectObstacle()
     return hit
 end
 
--- Detect gap using downward raycast
+-- Detect gaps in front using downward ray
 local function DetectGap()
     if not Root then return false end
     local origin = Root.Position + (Checkpoints[CurrentCheckpoint] - Root.Position).Unit * 2
@@ -89,53 +86,50 @@ local function DetectGap()
     return not hit
 end
 
--- Move toward checkpoint using CFrame lerp
+-- Move to checkpoint
 local function MoveToCheckpoint()
-    if not Root then return end
+    if not Humanoid or not Root then return end
     local target = Checkpoints[CurrentCheckpoint]
     if not target then return end
 
-    local obstacle = DetectObstacle()
-    local gap = DetectGap()
-
-    -- Jump if obstacle detected
-    if Humanoid and obstacle and Humanoid.FloorMaterial ~= Enum.Material.Air then
-        Humanoid.Jump = true
-    elseif Mount and Mount:FindFirstChild("Jump") and obstacle then
-        Mount.Jump = true
-    end
-
-    -- Stop if gap detected
-    if gap then return end
-
-    -- Move via CFrame lerp
-    local direction = (target - Root.Position)
-    local distance = direction.Magnitude
-    if distance > 2 then
-        local step = direction.Unit * Speed * RunService.RenderStepped:Wait()
-        Root.CFrame = Root.CFrame + step
-    else
+    local distance = (target - Root.Position).Magnitude
+    if distance < 3 then
         CurrentCheckpoint = CurrentCheckpoint + 1
         if CurrentCheckpoint > #Checkpoints then
-            AutoRunEnabled = false -- stop at summit
+            AutoRunEnabled = false
         end
+        return
     end
+
+    -- Jump if obstacle
+    if DetectObstacle() then
+        Humanoid.Jump = true
+    end
+
+    -- Stop if gap
+    if DetectGap() then
+        Humanoid.WalkSpeed = 0
+        return
+    else
+        Humanoid.WalkSpeed = Speed
+    end
+
+    Humanoid:MoveTo(target)
 end
 
--- Run loop
 RunService.RenderStepped:Connect(function()
     if AutoRunEnabled then
         UpdateCharacter()
-        if Root then
+        if Humanoid and Root then
             MoveToCheckpoint()
         end
     end
 end)
 
 -- UI toggle
-local Toggle = MainTab:Toggle({
+local Toggle = Tab:Toggle({
     Title = "Auto Run Mount",
-    Desc = "CFrame-based smart checkpoint runner",
+    Desc = "Start from checkpoint 1 with obstacle detection",
     Icon = "run",
     Type = "Checkbox",
     Value = false,
